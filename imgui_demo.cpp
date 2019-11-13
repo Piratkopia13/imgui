@@ -101,10 +101,15 @@ Index of this file:
 // Play it nice with Windows users. Notepad in 2017 still doesn't display text data with Unix-style \n.
 #ifdef _WIN32
 #define IM_NEWLINE  "\r\n"
-#define snprintf    _snprintf
-#define vsnprintf   _vsnprintf
 #else
 #define IM_NEWLINE  "\n"
+#endif
+
+#if defined(_MSC_VER) && !defined(snprintf)
+#define snprintf    _snprintf
+#endif
+#if defined(_MSC_VER) && !defined(vsnprintf)
+#define vsnprintf   _vsnprintf
 #endif
 
 //-----------------------------------------------------------------------------
@@ -978,7 +983,7 @@ static void ShowDemoWindowWidgets()
         if (ImGui::TreeNode("In columns"))
         {
             ImGui::Columns(3, NULL, false);
-            static bool selected[16] = { 0 };
+            static bool selected[16] = {};
             for (int i = 0; i < 16; i++)
             {
                 char label[32]; sprintf(label, "Item %d", i);
@@ -1130,7 +1135,7 @@ static void ShowDemoWindowWidgets()
 
         // Create a dummy array of contiguous float values to plot
         // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float and the sizeof() of your structure in the Stride parameter.
-        static float values[90] = { 0 };
+        static float values[90] = {};
         static int values_offset = 0;
         static double refresh_time = 0.0;
         if (!animate || refresh_time == 0.0)
@@ -1231,7 +1236,7 @@ static void ShowDemoWindowWidgets()
 
         // Generate a dummy default palette. The palette will persist and can be edited.
         static bool saved_palette_init = true;
-        static ImVec4 saved_palette[32] = { };
+        static ImVec4 saved_palette[32] = {};
         if (saved_palette_init)
         {
             for (int n = 0; n < IM_ARRAYSIZE(saved_palette); n++)
@@ -1663,7 +1668,7 @@ static void ShowDemoWindowWidgets()
     {
         // Submit an item (various types available) so we can query their status in the following block.
         static int item_type = 1;
-        ImGui::Combo("Item Type", &item_type, "Text\0Button\0Button (w/ repeat)\0Checkbox\0SliderFloat\0InputText\0InputFloat\0InputFloat3\0ColorEdit4\0MenuItem\0TreeNode (w/ double-click)\0ListBox\0");
+        ImGui::Combo("Item Type", &item_type, "Text\0Button\0Button (w/ repeat)\0Checkbox\0SliderFloat\0InputText\0InputFloat\0InputFloat3\0ColorEdit4\0MenuItem\0TreeNode\0TreeNode (w/ double-click)\0ListBox\0", 20);
         ImGui::SameLine();
         HelpMarker("Testing how various types of items are interacting with the IsItemXXX functions.");
         bool ret = false;
@@ -1680,8 +1685,9 @@ static void ShowDemoWindowWidgets()
         if (item_type == 7) { ret = ImGui::InputFloat3("ITEM: InputFloat3", col4f); }                   // Testing multi-component items (IsItemXXX flags are reported merged)
         if (item_type == 8) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
         if (item_type == 9) { ret = ImGui::MenuItem("ITEM: MenuItem"); }                                // Testing menu item (they use ImGuiButtonFlags_PressedOnRelease button policy)
-        if (item_type == 10){ ret = ImGui::TreeNodeEx("ITEM: TreeNode w/ ImGuiTreeNodeFlags_OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_NoTreePushOnOpen); } // Testing tree node with ImGuiButtonFlags_PressedOnDoubleClick button policy.
-        if (item_type == 11){ const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
+        if (item_type == 10){ ret = ImGui::TreeNode("ITEM: TreeNode"); if (ret) ImGui::TreePop(); }     // Testing tree node
+        if (item_type == 11){ ret = ImGui::TreeNodeEx("ITEM: TreeNode w/ ImGuiTreeNodeFlags_OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_NoTreePushOnOpen); } // Testing tree node with ImGuiButtonFlags_PressedOnDoubleClick button policy.
+        if (item_type == 12){ const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
 
         // Display the value of IsItemHovered() and other common item state functions.
         // Note that the ImGuiHoveredFlags_XXX flags can be combined.
@@ -1702,6 +1708,7 @@ static void ShowDemoWindowWidgets()
             "IsItemDeactivatedAfterEdit() = %d\n"
             "IsItemVisible() = %d\n"
             "IsItemClicked() = %d\n"
+            "IsItemToggledOpen() = %d\n"
             "GetItemRectMin() = (%.1f, %.1f)\n"
             "GetItemRectMax() = (%.1f, %.1f)\n"
             "GetItemRectSize() = (%.1f, %.1f)",
@@ -1719,6 +1726,7 @@ static void ShowDemoWindowWidgets()
             ImGui::IsItemDeactivatedAfterEdit(),
             ImGui::IsItemVisible(),
             ImGui::IsItemClicked(),
+            ImGui::IsItemToggledOpen(),
             ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y,
             ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y,
             ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y
@@ -3342,7 +3350,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     if (ImGui::Button("Revert Ref"))
         style = *ref;
     ImGui::SameLine();
-    HelpMarker("Save/Revert in local non-persistent storage. Default Colors definition are not affected. Use \"Export Colors\" below to save them somewhere.");
+    HelpMarker("Save/Revert in local non-persistent storage. Default Colors definition are not affected. Use \"Export\" below to save them somewhere.");
 
     ImGui::Separator();
 
@@ -3390,7 +3398,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         {
             static int output_dest = 0;
             static bool output_only_modified = true;
-            if (ImGui::Button("Export Unsaved"))
+            if (ImGui::Button("Export"))
             {
                 if (output_dest == 0)
                     ImGui::LogToClipboard();
